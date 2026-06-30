@@ -50,7 +50,7 @@ pip install -r requirements.txt
    cp config.example.yaml config.yaml      # Windows: copy config.example.yaml config.yaml
    ```
 
-2. `config.yaml`을 열어 아래 값을 채웁니다. (이 파일은 `.gitignore`에 포함되어 커밋되지 않습니다.)
+2. `config.yaml`을 열어 아래 값을 채웁니다. 
 
    | 항목 | 발급처 / 설명 |
    |------|----------------|
@@ -110,7 +110,7 @@ schtasks /Create /SC DAILY /TN "StockTracker" /ST 08:00 ^
 ```
 stock-youtube-tracker/
 ├── main.py                 # 파이프라인 진입점
-├── config.yaml             # 사용자 설정 (.gitignore 대상, 직접 생성)
+├── config.yaml             # 사용자 설정 (직접 생성)
 ├── config.example.yaml     # 설정 예시 (공개용)
 ├── requirements.txt
 ├── README.md
