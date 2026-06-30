@@ -1,11 +1,11 @@
 # 주식 유튜버 인사이트 트래커 (Stock YouTuber Insight Tracker)
 
-국내 주식 유튜버들의 새 영상을 매일 자동 수집하여, **Claude API로 종목별 언급 감성을 분석**하고,
-유튜버의 **입장 변화를 추적**해 **Gmail 데일리 브리핑** 및 **Obsidian 아카이브**로 제공하는
+국내 주식 유튜버들의 새 영상을 매일 자동 수집하여, Claude API로 종목별 언급 감성을 분석하고,
+유튜버의 입장 변화를 추적해 Gmail 데일리 브리핑 및 Obsidian 아카이브로 제공하는
 개인 설치형 Python 자동화 도구입니다.
 
 > 여러 채널을 구독하지만 모든 영상을 볼 시간이 없는 개인 투자자를 위한 도구입니다.
-> 공개 유튜브 자막만 활용하며, 본 도구의 출력은 **투자 권유가 아닌 참고 자료**입니다.
+> 공개 유튜브 자막만 활용하며, 본 도구의 출력은 투자 권유가 아닌 참고 자료입니다.
 
 ---
 
@@ -38,7 +38,7 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-요구 환경: **Python 3.10 이상**
+요구 환경: Python 3.10 이상
 
 ---
 
@@ -56,7 +56,7 @@ pip install -r requirements.txt
    |------|----------------|
    | `api_keys.youtube` | [Google Cloud Console](https://console.cloud.google.com) → YouTube Data API v3 키 (무료 일 10,000 units) |
    | `api_keys.claude` | [Anthropic Console](https://console.anthropic.com) → API 키 (유료) |
-   | `channels` | 추적할 유튜버 **@핸들** 목록 (예: `"@StockChannelA"`). 채널ID(`UC…`)도 허용 |
+   | `channels` | 추적할 유튜버 @핸들 목록 (예: `"@StockChannelA"`). 채널ID(`UC…`)도 허용 |
    | `stocks` | 관심 종목명 + `aliases`(줄임말·종목코드) 목록 |
    | `gmail_sender` / `gmail_app_password` | Gmail 주소 + [앱 비밀번호](https://myaccount.google.com/apppasswords) (2단계 인증 필요) |
    | `gmail_to` | 브리핑 수신자(복수 가능) |
@@ -135,11 +135,11 @@ stock-youtube-tracker/
 
 본 프로젝트의 핵심 리스크는 유튜브 자동 자막의 누락·부정확입니다.
 부정확한 자막을 억지로 분석해 틀린 정보를 사실처럼 전달하는 것이 가장 위험하므로,
-**"확실한 것만 분석하고, 애매하면 신뢰도 '하'로 솔직히 표시한다"**를 원칙으로 합니다.
+"확실한 것만 분석하고, 애매하면 신뢰도 '하'로 솔직히 표시한다"를 원칙으로 합니다.
 
 - 자막이 최소 길이(기본 100자) 미만이면 분석에서 제외
-- 판단이 불확실하면 신뢰도 **"하"** + 브리핑에 **"참고용"** 표기
-- 신뢰도 "하" 항목은 종목별 여론 비율 집계에서 **제외**(건수만 별도 표기)
+- 판단이 불확실하면 신뢰도 "하" + 브리핑에 "참고용" 표기
+- 신뢰도 "하" 항목은 종목별 여론 비율 집계에서 제외(건수만 별도 표기)
 
 ---
 
@@ -153,5 +153,5 @@ stock-youtube-tracker/
 
 ## v1 범위 / 향후 확장
 
-- **현재(v1):** 국내(KOSPI/KOSDAQ) 한국어 채널·종목 대상 (ETF 포함)
-- **향후:** 해외(미국 등) 주식·영어권 유튜버 지원 (종목 매칭 모듈 확장 가능 구조)
+- 현재(v1): 국내(KOSPI/KOSDAQ) 한국어 채널·종목 대상 (ETF 포함)
+- 향후: 해외(미국 등) 주식·영어권 유튜버 지원 (종목 매칭 모듈 확장 가능 구조)
