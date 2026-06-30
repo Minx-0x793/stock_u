@@ -1,0 +1,55 @@
+# =============================================================================
+# 주식 유튜버 인사이트 트래커 — 설정 파일 예시 (화면 설계서 SC-00 기준)
+# -----------------------------------------------------------------------------
+# 이 파일을 config.yaml 로 복사한 뒤 본인 값으로 채우세요.
+#   cp config.example.yaml config.yaml   (Windows: copy config.example.yaml config.yaml)
+# config.yaml 은 .gitignore 대상이므로 절대 커밋되지 않습니다. (NFR-03)
+# 편집 매체: 텍스트 에디터(VS Code 등) · 빈도: 최초 1회 + 종목/채널 추가 시
+# =============================================================================
+
+# --- API 키 (FR / NFR-03) --------------------------------------------------
+api_keys:
+  # YouTube Data API v3 키 (Google Cloud Console, 무료 일 10,000 units)
+  youtube: "YOUR_YOUTUBE_DATA_API_V3_KEY"
+  # Anthropic Claude API 키 (https://console.anthropic.com)
+  claude: "YOUR_CLAUDE_API_KEY"
+
+# --- 추적 유튜버 채널 (FR-01) ---------------------------------------------
+# 자동 추천/탐색 없음. 사용자가 @핸들로 직접 등록합니다.
+# (채널ID UCxxxx 형식도 그대로 넣을 수 있습니다.)
+channels:
+  - "@StockChannelA"
+  - "@StockChannelB"
+
+# --- 관심 종목 + 별칭 (FR-02, FR-02-1) ------------------------------------
+# name: 정식 종목명 / aliases: 자막에서 매칭할 줄임말·종목코드
+stocks:
+  - name: 삼성전자
+    aliases: ["삼전", "005930"]
+  - name: SK하이닉스
+    aliases: ["하닉", "000660"]
+  - name: LG전자
+    aliases: ["엘전", "066570"]
+  - name: 현대차
+    aliases: ["현차", "005380"]
+  - name: 카카오뱅크
+    aliases: ["카뱅", "323410"]
+
+# --- 동작 설정 ------------------------------------------------------------
+max_videos_per_day: 30        # 하루 최대 처리 영상 수 (FR-03)
+analysis_lang: ko             # 분석 결과 언어 (FR-04) — ko | en
+min_transcript_length: 100    # 신뢰 불가로 판단할 최소 자막 글자 수 (FR-17)
+lookback_hours: 24            # 신규 영상 수집 시간 범위 (FR-07)
+claude_model: "claude-haiku-4-5"  # 비용 절감용 Haiku 권장
+
+# --- Gmail 발송 (FR-05, FR-20) --------------------------------------------
+gmail_sender: "your_account@gmail.com"
+# Gmail 앱 비밀번호 (2단계 인증 후 발급, 일반 비밀번호 아님)
+gmail_app_password: "abcd efgh ijkl mnop"
+# 수신자 목록 (복수 가능)
+gmail_to:
+  - "your_account@gmail.com"
+
+# --- Obsidian 아카이브 (FR-06, FR-24) -------------------------------------
+# vault 루트 경로. 비워두면(또는 경로 오류 시) Gmail 만 발송 (FR-26)
+vault_path: "C:/Users/you/Documents/ObsidianVault"

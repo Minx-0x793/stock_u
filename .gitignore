@@ -1,0 +1,23 @@
+# 사용자 설정 (API 키 포함) — 절대 커밋 금지 (NFR-03)
+config.yaml
+.env
+
+# 런타임 생성 데이터
+data/processed_ids.json
+data/history.json
+logs/*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 데모 산출물
+demo_output/
