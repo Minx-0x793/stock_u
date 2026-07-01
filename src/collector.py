@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -26,6 +27,58 @@ from .logger import get_logger
 log = get_logger("collector")
 
 _PROCESSED_PATH = os.path.join("data", "processed_ids.json")
+
+# 자막 요청 사이 지연(초) — 429(Too Many Requests) 예방 (NFR-02)
+_TRANSCRIPT_DELAY = 1.5
+# 자막 수집 결과 구분용 센티널: 요청 자체가 반복 실패(429 등)
+_REQUEST_BLOCKED = object()
+
+
+def _build_transcript_api(config: Config) -> YouTubeTranscriptApi:
+    """설정된 프록시로 youtube-transcript-api 1.0+ 클라이언트를 만든다.
+
+    proxy.type 이 none 이면 프록시 없이 동작한다. Webshare/Generic 프록시를
+    쓰면 YouTube 의 IP 단위 자막 차단(429)을 우회할 수 있다.
+    """
+    ptype = config.proxy_type
+    if ptype in ("", "none"):
+        return YouTubeTranscriptApi()
+
+    try:
+        from youtube_transcript_api.proxies import (
+            GenericProxyConfig,
+            WebshareProxyConfig,
+        )
+    except ImportError:
+        log.warning("이 버전은 프록시를 지원하지 않습니다 — 프록시 없이 진행합니다.")
+        return YouTubeTranscriptApi()
+
+    if ptype == "webshare":
+        if not (config.proxy_webshare_username and config.proxy_webshare_password):
+            log.warning("webshare 프록시 자격증명이 비어 있음 — 프록시 없이 진행합니다.")
+            return YouTubeTranscriptApi()
+        log.info("Webshare 프록시로 자막을 수집합니다.")
+        return YouTubeTranscriptApi(
+            proxy_config=WebshareProxyConfig(
+                proxy_username=config.proxy_webshare_username,
+                proxy_password=config.proxy_webshare_password,
+            )
+        )
+
+    if ptype == "generic":
+        if not (config.proxy_http_url or config.proxy_https_url):
+            log.warning("generic 프록시 URL이 비어 있음 — 프록시 없이 진행합니다.")
+            return YouTubeTranscriptApi()
+        log.info("Generic 프록시로 자막을 수집합니다.")
+        return YouTubeTranscriptApi(
+            proxy_config=GenericProxyConfig(
+                http_url=config.proxy_http_url or None,
+                https_url=config.proxy_https_url or None,
+            )
+        )
+
+    log.warning("알 수 없는 proxy.type='%s' — 프록시 없이 진행합니다.", ptype)
+    return YouTubeTranscriptApi()
 
 
 @dataclass
@@ -131,21 +184,36 @@ def _fetch_recent_videos(
     return items
 
 
-def _fetch_transcript(video_id: str, language: str = "ko") -> str:
-    """영상 자막을 한국어 우선으로 수집한다. 없으면 빈 문자열. (FR-09, FR-10)"""
-    try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+def _fetch_transcript(ytt: YouTubeTranscriptApi, video_id: str,
+                      language: str = "ko", retries: int = 3):
+    """영상 자막을 한국어 우선으로 수집한다. (FR-09, FR-10)
+
+    youtube-transcript-api 1.0+ 의 인스턴스 fetch API 를 사용한다.
+
+    Returns:
+        - str : 자막 텍스트 (빈 문자열이면 '자막 없음/비활성화')
+        - _REQUEST_BLOCKED : 429 등으로 요청이 반복 실패 (자막 없음과 구분)
+    """
+    langs = list(dict.fromkeys([language, "ko", "en"]))  # 중복 제거, 순서 유지
+    for attempt in range(retries):
         try:
-            transcript = transcript_list.find_transcript([language, "ko"])
-        except NoTranscriptFound:
-            transcript = next(iter(transcript_list))
-        segments = transcript.fetch()
-        return " ".join(seg["text"] for seg in segments).strip()
-    except (TranscriptsDisabled, NoTranscriptFound):
-        return ""
-    except Exception as e:  # 비공식 라이브러리 — 다양한 예외 방어 (NFR-04)
-        log.warning("자막 수집 실패 (video=%s): %s", video_id, e)
-        return ""
+            fetched = ytt.fetch(video_id, languages=langs)
+            return " ".join(s.text for s in fetched).strip()
+        except (TranscriptsDisabled, NoTranscriptFound):
+            return ""  # 진짜 자막 없음
+        except Exception as e:  # 비공식 라이브러리 — 다양한 예외 방어 (NFR-04)
+            msg = str(e).replace("\n", " ")
+            if "429" in msg or "Too Many Requests" in msg or "blocked" in msg.lower():
+                wait = 4 * (2 ** attempt)  # 4, 8, 16초 백오프
+                log.warning(
+                    "YouTube 요청 제한(429) — %d초 대기 후 재시도 (%d/%d) video=%s",
+                    wait, attempt + 1, retries, video_id,
+                )
+                time.sleep(wait)
+                continue
+            log.warning("자막 수집 실패 (video=%s): %s", video_id, msg[:120])
+            return ""
+    return _REQUEST_BLOCKED
 
 
 def collect(config: Config) -> list[VideoItem]:
@@ -157,6 +225,7 @@ def collect(config: Config) -> list[VideoItem]:
     - max_videos_per_day 까지만 분석 대상으로 수집 (FR-03)
     """
     youtube = build("youtube", "v3", developerKey=config.youtube_api_key)
+    ytt = _build_transcript_api(config)
     processed = _load_processed_ids()
     since = datetime.now(timezone.utc) - timedelta(hours=config.lookback_hours)
 
@@ -192,8 +261,12 @@ def collect(config: Config) -> list[VideoItem]:
                 )
                 break
 
-            transcript = _fetch_transcript(vid, config.analysis_lang)
-            if not transcript:
+            transcript = _fetch_transcript(ytt, vid, config.analysis_lang)
+            if transcript is _REQUEST_BLOCKED:
+                item.skipped = True
+                item.skip_reason = "YouTube 접속 제한(429)"
+                log.warning("  분석 제외(YouTube 429 반복): %s | %s", vid, item.title)
+            elif not transcript:
                 item.skipped = True
                 item.skip_reason = "자막 없음"
                 log.info("  분석 제외(자막 없음): %s | %s", vid, item.title)
@@ -207,6 +280,7 @@ def collect(config: Config) -> list[VideoItem]:
                 log.info("  수집 완료(%d자): %s | %s", len(transcript), vid, item.title)
 
             collected.append(item)
+            time.sleep(_TRANSCRIPT_DELAY)  # 429 예방용 지연
 
     log.info(
         "수집 종료 — 총 %d건 (분석대상 %d / 제외 %d) ✓",

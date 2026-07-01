@@ -53,3 +53,20 @@ gmail_to:
 # --- Obsidian 아카이브 (FR-06, FR-24) -------------------------------------
 # vault 루트 경로. 비워두면(또는 경로 오류 시) Gmail 만 발송 (FR-26)
 vault_path: "C:/Users/you/Documents/ObsidianVault"
+
+# --- 프록시 (선택) — YouTube 자막 IP 차단(429) 우회 ------------------------
+# YouTube 는 동일 IP 에서 자막을 자주 요청하면 429(Too Many Requests)로 차단한다.
+# 집/회사 IP 가 차단되면 자막 수집이 전부 실패하므로, 이 경우 프록시를 설정한다.
+#   type: none      → 프록시 미사용 (기본)
+#   type: webshare  → Webshare 레지덴셜 프록시 (youtube-transcript-api 공식 권장)
+#                     https://www.webshare.io 가입 후 Residential 프록시의
+#                     Proxy Username / Password 입력
+#   type: generic   → 직접 보유한 HTTP/HTTPS 프록시 사용
+proxy:
+  type: none
+  webshare:
+    username: "YOUR_WEBSHARE_PROXY_USERNAME"
+    password: "YOUR_WEBSHARE_PROXY_PASSWORD"
+  generic:
+    http_url: "http://user:pass@host:port"
+    https_url: "https://user:pass@host:port"

@@ -52,6 +52,12 @@ class Config:
     gmail_app_password: str
     gmail_to: list[str]
     vault_path: str
+    # 프록시 설정 (YouTube 자막 IP 차단 우회용, 선택)
+    proxy_type: str = "none"           # none | webshare | generic
+    proxy_webshare_username: str = ""
+    proxy_webshare_password: str = ""
+    proxy_http_url: str = ""
+    proxy_https_url: str = ""
     raw: dict[str, Any] = field(default_factory=dict)
 
     def alias_map(self) -> dict[str, str]:
@@ -124,6 +130,10 @@ def load_config(path: str = "config.yaml") -> Config:
     if not api_keys.get("youtube"):
         raise ConfigError("config.yaml 필수 항목 누락: 'api_keys.youtube'")
 
+    proxy = raw.get("proxy", {}) or {}
+    ws = proxy.get("webshare", {}) or {}
+    gen = proxy.get("generic", {}) or {}
+
     return Config(
         youtube_api_key=api_keys["youtube"],
         anthropic_api_key=claude_key,
@@ -138,5 +148,10 @@ def load_config(path: str = "config.yaml") -> Config:
         gmail_app_password=_require(raw, "gmail_app_password"),
         gmail_to=list(_require(raw, "gmail_to")),
         vault_path=raw.get("vault_path", "") or "",
+        proxy_type=(proxy.get("type") or "none").lower(),
+        proxy_webshare_username=ws.get("username", "") or "",
+        proxy_webshare_password=ws.get("password", "") or "",
+        proxy_http_url=gen.get("http_url", "") or "",
+        proxy_https_url=gen.get("https_url", "") or "",
         raw=raw,
     )

@@ -61,6 +61,7 @@ pip install -r requirements.txt
    | `gmail_sender` / `gmail_app_password` | Gmail 주소 + [앱 비밀번호](https://myaccount.google.com/apppasswords) (2단계 인증 필요) |
    | `gmail_to` | 브리핑 수신자(복수 가능) |
    | `vault_path` | Obsidian vault 경로 (선택 — 비우면 Gmail만 발송) |
+   | `proxy` | (선택) YouTube 자막 IP 차단(429) 우회용 프록시 — 아래 "알려진 제한" 참고 |
 
 ---
 
@@ -128,6 +129,37 @@ stock-youtube-tracker/
 │   └── history.json        # 유튜버별 종목 감성 이력
 └── logs/                   # 실행 로그 (YYYY-MM-DD.log)
 ```
+
+---
+
+## 알려진 제한 — YouTube 자막 IP 차단 (429)
+
+이 프로젝트는 자막 수집에 `youtube-transcript-api`(비공식 라이브러리)를 사용합니다.
+YouTube는 동일 IP에서 자막을 자주 요청하면 `429 Too Many Requests`로 차단합니다.
+집/회사 IP가 차단되면 자막이 존재하는 영상인데도 수집이 전부 실패할 수 있습니다.
+(이때 로그에 `YouTube 접속 제한(429)`로 표시되며, "자막 없음"과 구분됩니다.)
+
+완화책 (코드에 내장):
+- 자막 요청 사이 지연(기본 1.5초) + 429 발생 시 자동 재시도(4→8→16초 백오프)
+- `max_videos_per_day`를 낮추면(예: `5`) 한 번에 보내는 요청이 줄어 차단 확률이 낮아짐
+
+근본 해결책 — 프록시 (프로덕션 권장):
+IP가 차단되면 다른 IP로 요청해야 합니다. `config.yaml`의 `proxy` 항목을 설정하세요.
+
+```yaml
+proxy:
+  type: webshare          # none | webshare | generic
+  webshare:
+    username: "웹셰어_프록시_사용자명"
+    password: "웹셰어_프록시_비밀번호"
+```
+
+- Webshare(권장): [webshare.io](https://www.webshare.io) 가입 → Residential 프록시의
+  Proxy Username/Password 입력. `youtube-transcript-api`가 공식 지원하는 방식입니다.
+- Generic: 직접 보유한 HTTP/HTTPS 프록시가 있으면 `type: generic`으로 URL 입력.
+
+프록시 없이 개인 PC에서 하루 1회, 소량(`max_videos_per_day` 5~10)으로 돌리면
+차단을 피할 수 있는 경우가 많습니다. 매일 다량을 안정적으로 처리하려면 프록시가 필요합니다.
 
 ---
 
